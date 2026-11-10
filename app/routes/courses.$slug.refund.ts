@@ -51,8 +51,9 @@ const ineligibleResponses: Record<
   },
 };
 
-// Rejections go back to the form, where they are shown as a toast like the
-// validation errors, rather than replacing the course page with an error.
+// Refund Eligibility rejections go back to the form, where they are shown as a
+// toast like the validation errors, rather than replacing the course page with
+// an error. The spec asks for this.
 function rejection(message: string, status: number) {
   return data({ errors: { refund: message } }, { status });
 }
@@ -61,7 +62,7 @@ export async function action({ params, request }: Route.ActionArgs) {
   const currentUserId = await getCurrentUserId(request);
 
   if (!currentUserId) {
-    return rejection("Log in to request a refund.", 401);
+    throw data("Log in to request a refund.", { status: 401 });
   }
 
   const { slug } = parseParams(params, refundParamsSchema);

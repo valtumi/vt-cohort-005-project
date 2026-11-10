@@ -47,6 +47,13 @@ export type SubmitRefundRequestResult =
 
 type Purchase = typeof purchases.$inferSelect;
 
+/** Which Learner's purchase of which course, judged on which calendar day. */
+export type RefundCheck = {
+  learnerId: number;
+  courseId: number;
+  today: Date;
+};
+
 function getLatestPurchase(learnerId: number, courseId: number) {
   return db
     .select()
@@ -58,7 +65,7 @@ function getLatestPurchase(learnerId: number, courseId: number) {
     .get();
 }
 
-function getLessonIdsForCourse(courseId: number) {
+export function getLessonIdsForCourse(courseId: number) {
   return db
     .select({ id: lessons.id })
     .from(lessons)
@@ -134,11 +141,7 @@ function hasClaimedTeamSeat(purchaseId: number) {
   return claimedSeat !== undefined;
 }
 
-export function getRefundOffer(input: {
-  learnerId: number;
-  courseId: number;
-  today: Date;
-}): RefundOffer {
+export function getRefundOffer(input: RefundCheck): RefundOffer {
   const check = checkRefundEligibility(input);
   if (!check.eligible) return check;
 
@@ -154,12 +157,9 @@ export function getRefundOffer(input: {
  * stale) and, if they are still eligible, records a Pending Refund Request.
  * The confirmation email is returned for the caller to deliver.
  */
-export function submitRefundRequest(input: {
-  learnerId: number;
-  courseId: number;
-  reason: string;
-  today: Date;
-}): SubmitRefundRequestResult {
+export function submitRefundRequest(
+  input: RefundCheck & { reason: string }
+): SubmitRefundRequestResult {
   const check = checkRefundEligibility(input);
   if (!check.eligible) return check;
 
@@ -199,11 +199,7 @@ export function submitRefundRequest(input: {
   return { eligible: true, refundRequest, email };
 }
 
-function checkRefundEligibility(input: {
-  learnerId: number;
-  courseId: number;
-  today: Date;
-}):
+function checkRefundEligibility(input: RefundCheck):
   | { eligible: true; purchase: Purchase; lastDayInWindow: string }
   | { eligible: false; reason: RefundIneligibilityReason } {
   // Refund Eligibility applies to the Learner's most recent purchase.
@@ -258,9 +254,7 @@ function buildRefundRequestConfirmation(input: {
     body: [
       `Hi ${input.learnerName},`,
       "",
-      `We have your Refund Request for "${input.courseTitle}". Your Refund will be ${formatPrice(input.refundAmount)}, the amount you paid.`,
-      "",
-      "Our team reviews every Refund Request by hand. You do not need to do anything else — we will email you again when it is done.",
+      `We have your Refund Request for "${input.courseTitle}". Your Refund will be ${formatPrice(input.refundAmount)}, the amount you paid. Our team reviews every Refund Request by hand. You do not need to do anything else — we will email you again when it is done.`,
       "",
       "— The Cadence team",
     ].join("\n"),

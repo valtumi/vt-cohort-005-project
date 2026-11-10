@@ -116,6 +116,14 @@ function addRefundRequest(purchaseId: number, status: schema.RefundStatus) {
     .run();
 }
 
+function setListPrice(price: number) {
+  testDb
+    .update(schema.courses)
+    .set({ price })
+    .where(eq(schema.courses.id, base.course.id))
+    .run();
+}
+
 function offerOnMarch2() {
   return getRefundOffer({
     learnerId: base.user.id,
@@ -126,6 +134,7 @@ function offerOnMarch2() {
 
 describe("getRefundOffer", () => {
   it("offers a full-price buyer everything they paid, until the 14th day after purchase", () => {
+    setListPrice(9900);
     buyCourse({ amountPaid: 9900 });
 
     const offer = getRefundOffer({
@@ -253,14 +262,11 @@ describe("getRefundOffer", () => {
 
   describe("Refund Amount", () => {
     // The Refund Amount is always what the Learner paid, never the list
-    // price. A coupon buyer used to be promised the list price, which is
+    // price. A buyer who paid less than the list price without a
+    // purchasing-power price used to be promised the list price, which is
     // more than they paid.
     beforeEach(() => {
-      testDb
-        .update(schema.courses)
-        .set({ price: 9900 })
-        .where(eq(schema.courses.id, base.course.id))
-        .run();
+      setListPrice(9900);
     });
 
     it("is what a purchasing-power buyer paid", () => {
@@ -269,7 +275,7 @@ describe("getRefundOffer", () => {
       expect(offerOnMarch2()).toMatchObject({ refundAmount: 2970 });
     });
 
-    it("is what a coupon buyer paid, not the list price", () => {
+    it("is what was paid when that is less than the list price without a purchasing-power price", () => {
       buyCourse({ amountPaid: 4900, country: "US" });
 
       expect(offerOnMarch2()).toMatchObject({ refundAmount: 4900 });
@@ -352,11 +358,14 @@ describe("submitRefundRequest", () => {
     if (!result.eligible) throw new Error("expected an eligible submission");
     expect(result.email.to).toBe("test@example.com");
     expect(result.email.subject).toBe("Refund requested — Test Course");
-    expect(result.email.body).toContain(
-      'We have your Refund Request for "Test Course". Your Refund will be $49.00, the amount you paid.'
-    );
-    expect(result.email.body).toContain(
-      "Our team reviews every Refund Request by hand. You do not need to do anything else — we will email you again when it is done."
+    expect(result.email.body).toBe(
+      [
+        "Hi Test User,",
+        "",
+        'We have your Refund Request for "Test Course". Your Refund will be $49.00, the amount you paid. Our team reviews every Refund Request by hand. You do not need to do anything else — we will email you again when it is done.',
+        "",
+        "— The Cadence team",
+      ].join("\n")
     );
     expect(result.email.body).not.toMatch(/reversal|chargeback/i);
   });

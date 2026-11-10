@@ -37,7 +37,7 @@ The 14 calendar days after a purchase. During this time a Learner can submit a R
 _Avoid_: Cancel window, cancellation period, grace period
 
 **Refund Eligibility**:
-All the rules that decide whether a Learner can submit a Refund Request for a purchase. These are the Refund Window, under 2 hours of the course watched, under half of its lessons completed, and no claimed team seat.
+All the rules that decide whether a Learner can submit a Refund Request for a purchase. These are the Refund Window, under 2 hours of the course watched, under half of its lessons completed, no claimed team seat, and no Pending Refund Request already on the purchase.
 _Avoid_: Cancellation offer, cancel rules
 
 **Chargeback**:

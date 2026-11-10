@@ -45,7 +45,11 @@ import { formatDuration, formatPrice } from "~/lib/utils";
 import { renderMarkdown } from "~/lib/markdown.server";
 import { resolveCountry } from "~/lib/country.server";
 import { calculatePppPrice, getCountryTierInfo } from "~/lib/ppp";
-import { getRefundOffer } from "~/lib/refunds.server";
+import {
+  getLessonIdsForCourse,
+  getRefundOffer,
+  type RefundOffer,
+} from "~/lib/refunds.server";
 import { parseFormData } from "~/lib/validation";
 import { MAX_RATING, MIN_RATING } from "~/lib/ratings";
 import { StarRating, StarRatingInput } from "~/components/star-rating";
@@ -140,30 +144,12 @@ function isUserEnrolled(userId: number, courseId: number) {
   return !!enrollment;
 }
 
-function getCourseLessonIds(courseId: number): number[] {
-  const courseModules = db
-    .select({ id: modules.id })
-    .from(modules)
-    .where(eq(modules.courseId, courseId))
-    .all();
-
-  if (courseModules.length === 0) return [];
-
-  const courseLessons = db
-    .select({ id: lessons.id })
-    .from(lessons)
-    .where(or(...courseModules.map((m) => eq(lessons.moduleId, m.id)))!)
-    .all();
-
-  return courseLessons.map((l) => l.id);
-}
-
 function calculateProgress(
   userId: number,
   courseId: number,
   weightByDuration: boolean
 ) {
-  const lessonIds = getCourseLessonIds(courseId);
+  const lessonIds = getLessonIdsForCourse(courseId);
 
   if (lessonIds.length === 0) return 0;
 
@@ -391,8 +377,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
   let progress = 0;
   let lessonProgressMap: Record<number, string> = {};
   let nextLessonId: number | null = null;
-  let refundOffer: { refundAmount: number; lastDayInWindow: string } | null =
-    null;
+  let refundOffer: Extract<RefundOffer, { eligible: true }> | null = null;
 
   if (currentUserId) {
     enrolled = isUserEnrolled(currentUserId, course.id);
@@ -403,12 +388,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
         courseId: course.id,
         today: new Date(),
       });
-      refundOffer = offer.eligible
-        ? {
-            refundAmount: offer.refundAmount,
-            lastDayInWindow: offer.lastDayInWindow,
-          }
-        : null;
+      refundOffer = offer.eligible ? offer : null;
 
       progress = calculateProgress(currentUserId, course.id, false);
 
