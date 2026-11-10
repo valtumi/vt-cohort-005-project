@@ -65,7 +65,7 @@ function getOpenRefund(purchaseId: number) {
     .where(
       and(
         eq(refunds.purchaseId, purchaseId),
-        eq(refunds.status, RefundStatus.Requested)
+        eq(refunds.status, RefundStatus.Pending)
       )
     )
     .get();
@@ -216,7 +216,7 @@ export async function action({ params, request }: Route.ActionArgs) {
     .insert(refunds)
     .values({
       purchaseId: purchase.id,
-      status: RefundStatus.Requested,
+      status: RefundStatus.Pending,
       reason: parsed.data.reason,
     })
     .returning()

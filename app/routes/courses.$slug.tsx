@@ -387,7 +387,7 @@ function getRequestedRefund(purchaseId: number) {
     .where(
       and(
         eq(refunds.purchaseId, purchaseId),
-        eq(refunds.status, RefundStatus.Requested)
+        eq(refunds.status, RefundStatus.Pending)
       )
     )
     .get();

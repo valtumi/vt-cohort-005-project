@@ -70,7 +70,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     .where(
       and(
         eq(purchases.userId, currentUserId),
-        eq(refunds.status, RefundStatus.Requested)
+        eq(refunds.status, RefundStatus.Pending)
       )
     )
     .all();
